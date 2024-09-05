@@ -1,0 +1,72 @@
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f2f2f2;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.login-container {
+    background-color: #333333; /* Dark grey background */
+    padding: 20px;
+    border-radius: 5px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    border: 1px solid #CCCCCC; /* Light grey border */
+}
+
+h2 {
+    margin-bottom: 20px;
+    color: #FFFFFF; /* White text for h2 */
+    text-align: center
+}
+
+.input-group {
+    margin-bottom: 15px;
+}
+
+.input-group label {
+    display: block;
+    margin-bottom: 5px;
+    color: #CCCCCC; /* Light grey text for labels */
+}
+
+.input-group input {
+    width: 100%;
+    padding: 8px;
+    box-sizing: border-box;
+    border: 1px solid #CCCCCC; /* Light grey border for input fields */
+    border-radius: 4px;
+    background-color: #444444; /* Slightly darker grey background for input fields */
+    color: #FFFFFF; /* White text in input fields */
+}
+
+button {
+    width: 100%;
+    padding: 10px;
+    background-color: #007BFF;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+button:hover {
+    background-color: #0056b3;
+}
+
+p {
+    color: #CCCCCC; /* Light grey text for "Or request magic link" */
+    text-align: center;
+    margin-top: 15px;
+}
+
+a {
+    color: #CCCCCC; /* Light grey text for links */
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
