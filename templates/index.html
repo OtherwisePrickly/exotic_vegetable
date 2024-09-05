@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Product Descriptions Upload</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <script>
+        // Ensure this code runs after the DOM has fully loaded
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add event listener for the "Generate Description" button
+            document.getElementById('generate-button').addEventListener('click', function() {
+                showLoading();
+            });
+
+            {% if bedrock_response %}
+            document.getElementById('generate-button').style.display = 'none';
+            document.getElementById('reset-button').style.display = 'inline';
+            hideLoading();
+
+            const attributeLists = document.querySelectorAll('.attributes ul');
+            attributeLists.forEach(list => {
+                list.setAttribute('contenteditable', 'false');
+            });
+
+            const checkboxes = document.querySelectorAll('#translation-options input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.addEventListener('change', function() {
+                    const isChecked = this.checked;
+                    const language = this.value;
+                    updateTranslation(language, isChecked);
+                });
+            });
+            {% endif %}
+        });
+
+        function autoUpload() {
+            document.getElementById('upload-form').submit();
+        }
+
+        function showLoading() {
+            document.getElementById('loading-overlay').style.display = 'flex';
+        }
+
+        function hideLoading() {
+            document.getElementById('loading-overlay').style.display = 'none';
+        }
+
+        function updateTranslation(language, addTranslation) {
+            showLoading(); // Show the loading animation before the request
+            fetch("{{ url_for('update_translation') }}", {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': "{{ csrf_token() }}"  // Include the CSRF token here
+                },
+                body: JSON.stringify({ language: language, add: addTranslation })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();  // Reload the page to reflect the updated translations
+                } else {
+                    alert('There was an error updating the translations.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An unexpected error occurred.');
+            })
+            .finally(() => {
+                hideLoading(); // Hide the loading animation after the request is completed
+            });
+        }
+
+    function showFlashPopup(message, redirect = false) {
+        var flashPopup = document.getElementById('flash-popup');
+        var flashMessage = document.getElementById('flash-message');
+        flashMessage.textContent = message;
+        flashPopup.style.display = 'block';
+
+        // Automatically close the popup after 3.5 seconds
+        setTimeout(function() {
+            hideFlashPopup(redirect);
+        }, 3500);
+    }
+
+    function hideFlashPopup(redirect = false) {
+        var flashPopup = document.getElementById('flash-popup');
+        flashPopup.classList.add('fade-out'); // Add the fade-out class
+
+        // Remove the popup after the animation completes
+        setTimeout(function() {
+            flashPopup.style.display = 'none';
+            flashPopup.classList.remove('fade-out'); // Clean up the class for next use
+            if (redirect) {
+                window.location.href = "{{ url_for('upload') }}"; // Redirect to the upload page
+            }
+        }, 300); // Duration matches the CSS transition (0.3s)
+        }
+    </script>
+</head>
+<body>
+    <!-- Loading Overlay -->
+    <div id="loading-overlay">
+        <div class="loader">
+            Loading
+            <span class="dot">.</span>
+            <span class="dot">.</span>
+            <span class="dot">.</span>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- Logo and Introduction -->
+        <div class="logo-container">
+            <img src="{{ logo_url }}">
+        </div>
+
+        <!-- Flash Messages as Popup -->
+<div id="flash-popup" class="flash-popup" style="display: none;">
+    <span id="flash-icon">&#x26A0;</span> <!-- Triangle-exclamation icon -->
+    <span id="flash-message"></span>
+</div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <script>
+                    document.addEventListener('DOMContentLoaded', function() {
+                        var flashMessages = {{ messages | tojson }};
+                        flashMessages.forEach(function([category, message]) {
+                            if (category === 'error') {
+                                showFlashPopup(message);  // Display only error messages
+                            }
+                        });
+                    });
+                </script>
+            {% endif %}
+        {% endwith %}
+
+        {% if not products %}
+        <!-- Introduction and Instructions -->
+        <div class="intro">
+            <p>{{ welcome_message }}</p>
+            <h2>How to use:</h2>
+            <div class="instructions">
+                <div class="step">
+                    <span class="step-number">1.</span>
+                    <span class="step-text">Create a Word Document (docx) that contains the descriptors for the product. If you have an image URL of the product, include it on the last line. 
+                        <a href="{{ url_for('download_file', filename='example.docx') }}">Click here for an example</a>
+                    </span>
+                </div>
+                <div class="step">
+                    <span class="step-number">2.</span>
+                    <span class="step-text">Upload the file to this application.</span>
+                </div>
+                <div class="step">
+                    <span class="step-number">3.</span>
+                    <span class="step-text">Review the details, select the desired translation if required, and then hit generate.</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 1: File Upload -->
+        <form id="upload-form" action="{{ url_for('upload') }}" method="POST" enctype="multipart/form-data">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <input type="file" id="file-input" name="file" accept=".txt,.docx" onchange="autoUpload()" style="display: none;">
+            <label for="file-input" class="custom-file-upload">
+                Choose File
+            </label><br><br>
+        </form>
+        {% endif %}
+
+        {% if products %}
+        <!-- Step 2: Display Attributes and Show Options -->
+        <h2>Product Details:</h2>
+        <div class="product-list">
+            {% for product in products %}
+            <div class="product-item">
+                <div class="attributes">
+                    <!-- Make the list of attributes editable and add a unique ID -->
+                    <ul contenteditable="true" id="product-attributes-{{ loop.index }}">
+                        {% for attribute in product.attributes %}
+                        <li>{{ attribute }}</li>
+                        {% endfor %}
+                    </ul>
+                </div>
+                {% if product.image_url %}
+                <div class="image">
+                    <img src="{{ product.image_url }}" alt="Product Image">
+                </div>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Step 2: Language Options and Generate Button -->
+        <form action="{{ url_for('generate') }}" method="POST">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+            <div id="translation-options">
+                <label><input type="checkbox" name="languages" value="German" {% if 'German' in selected_languages %}checked{% endif %}> Translate to German</label>
+                <label><input type="checkbox" name="languages" value="Spanish" {% if 'Spanish' in selected_languages %}checked{% endif %}> Translate to Spanish</label>
+                <label><input type="checkbox" name="languages" value="French" {% if 'French' in selected_languages %}checked{% endif %}> Translate to French</label>
+            </div>
+            <div class="button-container">
+                <button type="submit" id="generate-button" class="custom-file-upload" name="generate">Generate Description</button>
+                <button type="submit" id="reset-button" class="custom-file-upload" style="display: none;" formaction="{{ url_for('reset') }}">Reset</button>
+            </div>
+        </form>
+        {% endif %}
+
+        {% if bedrock_response %}
+        <!-- Step 3: Display Generated Description and Translations -->
+        <h2>Generated Product Description:</h2>
+        <div class="bedrock-response">
+            <pre>{{ bedrock_response }}</pre>
+        </div>
+
+        <div id="translations">
+            {% for language, translation in translations.items() %}
+            <h2>Translation in {{ language }}:</h2>
+            <div class="translation-box">
+                <pre>{{ translation }}</pre>
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+    </div>
+</body>
+</html>
